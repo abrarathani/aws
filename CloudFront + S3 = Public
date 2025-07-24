@@ -1,0 +1,190 @@
+# Public CloudFront + S3
+
+This guide walks you through hosting a **public static website** using **Amazon S3** and **CloudFront** from scratch. It is designed for new learners who want to understand each step and avoid common mistakes. This setup makes your files publicly accessible via CloudFront.
+
+---
+
+## 🎯 What Is This Setup?
+
+**S3 (Simple Storage Service)** stores your website files (HTML, CSS, JS, images).
+
+**CloudFront (CDN)** distributes those files globally with low latency, faster delivery, and a custom domain.
+
+> ⚠️ In this **public setup**, S3 bucket and its files are accessible to everyone on the internet.
+
+---
+
+## ✅ Objective
+
+To create a public static website that:
+
+- Stores files in an **S3 bucket**
+- Serves them through a **CloudFront distribution**
+- Is accessible without any special permissions (public read)
+
+Example public URL:
+
+```
+http://your-cloudfront-domain.cloudfront.net/index.html
+```
+
+---
+
+## 💧 Prerequisites
+
+- AWS account (free tier is enough)
+- Basic AWS Console knowledge
+- Static site files (e.g., `index.html`, images, etc.)
+
+---
+
+## ✅ Step-by-Step Setup Guide
+
+### 1⃣ Create an S3 Bucket
+
+1. Open **S3** from the AWS Management Console.
+2. Click **Create bucket**.
+3. Name the bucket (e.g., `abrar-public-site`)
+4. Choose your **region** (e.g., `ap-south-1`)
+5. **Uncheck** "Block all public access"
+6. Confirm the warning box: "I acknowledge..."
+7. Click **Create bucket**
+
+### 2⃣ Upload Static Website Files
+
+1. Click your new bucket
+2. Click **Upload** > **Add files**
+3. Upload `index.html`, CSS, JS, images, etc.
+4. Click **Upload**
+
+### 3⃣ Make Files Public
+
+We need to allow everyone (public) to read these files.
+
+#### A. Bucket Policy
+
+1. Go to **Permissions tab > Bucket Policy**
+2. Paste the following:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::abrar-public-site/*"
+    }
+  ]
+}
+```
+
+> Replace `abrar-public-site` with your actual bucket name.
+
+### 4⃣ Enable Static Website Hosting
+
+1. Go to **Properties tab**
+2. Scroll to **Static website hosting**
+3. Click **Edit** > Choose **Enable**
+4. Enter:
+   - **Index document**: `index.html`
+5. Save changes
+
+This generates an **S3 static website endpoint** like:
+
+```
+http://abrar-public-site.s3-website.ap-south-1.amazonaws.com
+```
+
+### 5⃣ Create a CloudFront Distribution
+
+1. Go to **CloudFront > Create distribution**
+2. **Origin domain**: Paste your S3 website endpoint
+   - It looks like: `abrar-public-site.s3-website.ap-south-1.amazonaws.com`
+3. **Origin access**: Choose **None (bucket is public)**
+4. Scroll down to **Default root object**: enter `index.html`
+5. Click **Create distribution**
+
+### 6⃣ Test the Setup
+
+- Wait 5–10 minutes for CloudFront to deploy
+- Visit:
+
+```
+http://YOUR_CLOUDFRONT_DOMAIN/index.html
+```
+
+---
+
+## 🚨 Troubleshooting Guide
+
+### ❌ Access Denied on CloudFront
+
+**Cause**: Files aren't publicly readable.\
+**Fix**:
+
+- Double-check the S3 **bucket policy**
+- Ensure all "Block public access" settings are **off**
+
+### ❌ No Such Key Error
+
+**Cause**: `index.html` not found\
+**Fix**:
+
+- Make sure you uploaded `index.html`
+- Set "Default root object" to `index.html` in CloudFront
+
+### ❌ Changes not reflecting
+
+**Cause**: CloudFront caches old version\
+**Fix**:
+
+- Go to **CloudFront > Invalidations**
+- Create Invalidation: path = `/*`
+
+---
+
+## 📊 Final Working Summary
+
+| Component         | Value                                   |
+| ----------------- | --------------------------------------- |
+| S3 Bucket         | `abrar-public-site`                     |
+| Public Access     | Yes (via bucket policy)                 |
+| Static Hosting    | Enabled                                 |
+| CloudFront Origin | S3 Website Endpoint                     |
+| OAC               | Not used                                |
+| Default Object    | `index.html`                            |
+| Public URL        | `http://your-cloudfront.net/index.html` |
+
+---
+
+## 📁 GitHub Instructions
+
+To save and share this setup with others:
+
+1. Create a GitHub repo: `aws-s3-cloudfront-public-hosting`
+2. Add this guide as `README.md`
+3. Add sample files like `index.html`
+
+### Git commands:
+
+```bash
+git init
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git add .
+git commit -m "Public website hosting using S3 + CloudFront"
+git push -u origin main
+```
+
+---
+
+## 📚 Ending Note
+
+This public CloudFront + S3 setup is great for hosting personal websites, documentation, or static portfolios. It is beginner-friendly and avoids complexities like signed URLs or OAC.
+
+Once you master this, you can explore the **private setup** using **OAC (Origin Access Control)** for secure S3 access via CloudFront.
+
+Let me know if you want the private setup guide next or need help deploying a sample project!
+
