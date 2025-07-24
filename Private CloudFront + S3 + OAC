@@ -1,0 +1,186 @@
+# Private CloudFront + S3 + OAC 
+
+This guide explains how to securely host a **private static website** using **Amazon S3** and **CloudFront with OAC (Origin Access Control)**. This setup blocks direct access to S3 and allows only CloudFront to serve content, ensuring secure delivery.
+
+---
+
+## 🎯 What Is This Setup?
+
+**S3 (Simple Storage Service)** stores your website files (HTML, CSS, JS).
+
+**CloudFront (CDN)** serves the files globally and securely by restricting S3 access to itself using **OAC**.
+
+> 🔒 In this setup, S3 **does not allow public access**. CloudFront is the only way to access the content.
+
+---
+
+## ✅ Objective
+
+To create a secure static website that:
+
+* Stores files in an **S3 bucket (private)**
+* Uses **CloudFront distribution with OAC**
+* Prevents direct access to S3 files (403 if accessed directly)
+
+CloudFront URL:
+
+```
+https://your-cloudfront-id.cloudfront.net/index.html
+```
+
+---
+
+## 💧 Prerequisites
+
+* AWS account (free tier is enough)
+* Static website files (e.g., `index.html`)
+
+---
+
+## ✅ Step-by-Step Setup Guide
+
+### 1⃣ Create an S3 Bucket
+
+1. Open **S3** in AWS Console
+2. Click **Create bucket**
+3. Name it (e.g., `abrar-private-site`)
+4. Keep region (e.g., `ap-south-1`)
+5. **Keep "Block all public access" enabled** ✅
+6. Click **Create bucket**
+
+### 2⃣ Upload Website Files
+
+1. Open your new bucket
+2. Click **Upload > Add files**
+3. Upload `index.html`, images, etc.
+4. Click **Upload**
+
+### 3⃣ Do NOT Enable Static Website Hosting
+
+This is intentional.
+
+* CloudFront works with **object URLs** and not S3's static website endpoint.
+* Keep the static hosting **disabled**.
+
+### 4⃣ Create a CloudFront Distribution
+
+1. Go to **CloudFront > Create distribution**
+2. Origin domain: Choose your S3 bucket (not website endpoint)
+3. Under **Origin access**, choose:
+
+   * **Origin access control (OAC)** > Create new OAC
+   * Name: `S3-OAC`
+   * Signing behavior: **Always**
+4. Click **Create**
+
+### 5⃣ Update S3 Bucket Policy to Allow CloudFront Access
+
+Go to **S3 > Permissions > Bucket Policy** and add:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Id": "PolicyForCloudFrontPrivateContent",
+  "Statement": [
+    {
+      "Sid": "AllowCloudFrontServicePrincipal",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::abrar-private-site/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceArn": "arn:aws:cloudfront::782065889395:distribution/E26T0UBT5UTCI7"
+        }
+      }
+    }
+  ]
+}
+```
+
+> Replace bucket name and distribution ID accordingly.
+
+### 6⃣ Set Default Root Object
+
+In CloudFront settings:
+
+* Set **Default root object** = `index.html`
+
+### 7⃣ Wait for CloudFront Deployment
+
+* Takes 5–10 minutes to go live
+
+Then visit:
+
+```
+https://your-cloudfront-id.cloudfront.net/index.html
+```
+
+### 8⃣ (Optional) Create Invalidation for Cache Refresh
+
+* Go to **CloudFront > Invalidations**
+* Create Invalidation > Path = `/*`
+
+---
+
+## 🚨 Troubleshooting Guide
+
+### ❌ AccessDenied (XML Error)
+
+**Cause**: S3 bucket not accessible by CloudFront
+**Fix**:
+
+* Check bucket policy
+* Ensure correct distribution ID and region in policy
+
+### ❌ Direct S3 URL gives Access Denied
+
+**This is expected** in private setup. Users must use CloudFront URL.
+
+### ✅ Final Fix That Helped
+
+The issue was fixed by properly configuring the bucket policy with the exact **OAC ARN** in the `AWS:SourceArn` condition.
+
+---
+
+## 📊 Final Working Summary
+
+| Component         | Value                                    |
+| ----------------- | ---------------------------------------- |
+| S3 Bucket         | `abrar-private-site`                     |
+| Public Access     | ❌ Blocked                                |
+| Static Hosting    | ❌ Disabled                               |
+| CloudFront Origin | S3 Bucket (not website endpoint)         |
+| OAC               | ✅ Enabled & attached                     |
+| Default Object    | `index.html`                             |
+| Public URL        | `https://your-cloudfront.net/index.html` |
+
+---
+
+## 📁 GitHub Instructions
+
+1. Create a GitHub repo: `aws-s3-cloudfront-private-hosting`
+2. Save this guide as `README.md`
+3. Add your `index.html` and other assets
+
+### Git commands:
+
+```bash
+git init
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git add .
+git commit -m "Secure S3 + CloudFront + OAC Hosting"
+git push -u origin main
+```
+
+---
+
+## 📚 Ending Note
+
+This private CloudFront + S3 setup is ideal for **secure web hosting** — such as dashboards, portals, internal tools — where public access should be denied. CloudFront acts as the only allowed viewer using signed requests through OAC.
+
+Once you master this, you can even configure **custom domains + HTTPS (SSL)** and use **CloudFront Functions or Lambda\@Edge** for advanced use cases.
+
+Happy Hosting! 🚀
